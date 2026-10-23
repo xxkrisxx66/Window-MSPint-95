@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Untitled - Paint</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Tahoma, "MS Sans Serif", sans-serif;
+    background-image: url(img/hKOGoex.jpg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    color: #000;
+  }
+  .window {
+    width: min(1080px, 100%);
+    background: #c0c0c0;
+    border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+    box-shadow: 2px 2px 0 #000;
+  }
+  .titlebar {
+    min-height: 32px;
+    background: #000080;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 6px 4px 10px;
+    font-weight: bold;
+  }
+  .window-controls { display: flex; gap: 4px; }
+  .window-controls span {
+    width: 22px; height: 21px; display: grid; place-items: center;
+    color: #000; background: #c0c0c0;
+    border: 2px solid; border-color: #fff #404040 #404040 #fff;
+    line-height: 1;
+  }
+  .menubar { display: flex; gap: 18px; padding: 8px 10px; background: #c0c0c0; }
+  .menubar span:first-letter { text-decoration: underline; }
+  .workspace { display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 8px; padding: 8px; }
+  .toolbar { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; align-content: start; }
+  .tool {
+    min-height: 43px; font-size: 22px; cursor: pointer;
+    background: #c0c0c0; border: 2px solid;
+    border-color: #fff #404040 #404040 #fff;
+  }
+  .tool.active { border-color: #404040 #fff #fff #404040; background: #b0b0b0; }
+  .tool:focus-visible, .swatch:focus-visible { outline: 2px dotted #000; outline-offset: -5px; }
+  .tool-label { font-size: 12px; grid-column: 1 / -1; margin: 5px 0 0; }
+  .canvas-frame {
+    min-width: 0; height: min(62vh, 570px); min-height: 300px;
+    background: white; border: 2px solid;
+    border-color: #808080 #fff #fff #808080;
+  }
+  canvas { width: 100%; height: 100%; display: block; background: white; touch-action: none; cursor: crosshair; }
+  .options { padding: 0 8px 8px 148px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .options label { font-size: 13px; }
+  input[type="range"] { width: 110px; }
+  .palette {
+    display: grid; grid-template-columns: repeat(16, minmax(16px, 1fr)); gap: 4px;
+    padding: 8px; align-items: center;
+  }
+  .swatch { height: 25px; min-width: 0; border: 2px solid; border-color: #fff #404040 #404040 #fff; cursor: pointer; }
+  .swatch.selected { outline: 2px dotted #000; outline-offset: -5px; }
+  .statusbar { padding: 7px 9px; border-top: 2px solid #808080; font-size: 13px; min-height: 31px; }
+  button { font-family: inherit; }
+  .action {
+    background: #c0c0c0; border: 2px solid;
+    border-color: #fff #404040 #404040 #fff; padding: 5px 9px; cursor: pointer;
+  }
+  .action:active { border-color: #404040 #fff #fff #404040; }
+  @media (max-width: 600px) {
+    body { padding: 5px; align-items: flex-start; }
+    .workspace { grid-template-columns: 82px minmax(0, 1fr); gap: 5px; padding: 5px; }
+    .tool { min-height: 39px; font-size: 19px; }
+    .canvas-frame { height: 55vh; min-height: 250px; }
+    .options { padding: 0 5px 5px; }
+    .palette { grid-template-columns: repeat(8, minmax(18px, 1fr)); }
+    .swatch { height: 22px; }
+    .menubar { gap: 10px; padding: 7px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<main class="window" aria-label="Retro Paint application">
+  <div class="titlebar">
+    <span>Untitled - paint</span>
+    <div class="window-controls" aria-hidden="true"><span>_</span><span>□</span><span>×</span></div>
+  </div>
+  <nav class="menubar" aria-label="Menu"><span>File</span><span>Edit</span><span>View</span><span>Image</span><span>Colors</span><span>Help</span></nav>
+  <section class="workspace">
+    <aside class="toolbar" aria-label="Drawing tools">
+      <button class="tool active" data-tool="pen" aria-label="Pencil" title="Pencil">✎</button>
+      <button class="tool" data-tool="eraser" aria-label="Eraser" title="Eraser">▰</button>
+      <button class="tool" data-tool="line" aria-label="Line" title="Line">／</button>
+      <button class="tool" data-tool="spray" aria-label="Spray" title="Spray">▧</button>
+      <button class="tool" data-tool="fill" aria-label="Fill canvas" title="Fill canvas">🪣</button>
+      <button class="tool" data-tool="picker" aria-label="Colour picker" title="Colour picker">◉</button>
+      <p class="tool-label">Drawing tools</p>
+    </aside>
+    <div class="canvas-frame">
+      <canvas id="paintCanvas" aria-label="White drawing canvas"></canvas>
+    </div>
+  </section>
+  <section class="options">
+    <label for="brushSize">Brush size</label>
+    <input id="brushSize" type="range" min="1" max="40" value="4">
+    <span id="sizeValue">4 px</span>
+    <button class="action" id="clearCanvas">Clear canvas</button>
+    <button class="action" id="saveImage">Save drawing</button>
+  </section>
+  <section class="palette" id="palette" aria-label="Colour palette"></section>
+  <div class="statusbar" id="status">For Help, click Help Topics on the Help Menu</div>
+</main>
+<script>
+(() => {
+  const canvas = document.getElementById('paintCanvas');
+  const ctx = canvas.getContext('2d');
+  const status = document.getElementById('status');
+  const palette = document.getElementById('palette');
+  const brushSize = document.getElementById('brushSize');
+  const sizeValue = document.getElementById('sizeValue');
+  const colors = [
+    '#000000','#808080','#800000','#808000','#008000','#008080','#000080','#800080',
+    '#808040','#004040','#0080ff','#004080','#8000ff','#804000','#ffffff','#c0c0c0',
+    '#ff0000','#ffff00','#00ff00','#00ffff','#0000ff','#ff00ff','#ffff80','#00ff80',
+    '#80ffff','#8080ff','#ff0080','#ff8000'
+  ];
+  let color = '#000000';
+  let tool = 'pen';
+  let drawing = false;
+  let start = null;
+  let previous = null;
+  let snapshot = null;
+
+  function resizeCanvas(keepDrawing = true) {
+    const old = document.createElement('canvas');
+    if (keepDrawing && canvas.width && canvas.height) {
+      old.width = canvas.width; old.height = canvas.height;
+      old.getContext('2d').drawImage(canvas, 0, 0);
+    }
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(rect.width * dpr));
+    canvas.height = Math.max(1, Math.round(rect.height * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    if (keepDrawing && old.width && old.height) ctx.drawImage(old, 0, 0, old.width, old.height, 0, 0, rect.width, rect.height);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  }
+
+  function point(event) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+  function setStrokeStyle() {
+    ctx.lineWidth = Number(brushSize.value);
+    ctx.strokeStyle = tool === 'eraser' ? '#ffffff' : color;
+    ctx.fillStyle = tool === 'eraser' ? '#ffffff' : color;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  }
+  function drawDot(p) {
+    setStrokeStyle();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(0.5, Number(brushSize.value) / 2), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function drawSegment(a, b) {
+    setStrokeStyle();
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+
+  colors.forEach((c, i) => {
+    const swatch = document.createElement('button');
+    swatch.className = 'swatch' + (i === 0 ? ' selected' : '');
+    swatch.style.backgroundColor = c;
+    swatch.setAttribute('aria-label', 'Choose ' + c);
+    swatch.title = c;
+    swatch.addEventListener('click', () => {
+      color = c;
+      document.querySelectorAll('.swatch').forEach(s => s.classList.remove('selected'));
+      swatch.classList.add('selected');
+      if (tool === 'eraser') chooseTool('pen');
+      status.textContent = 'Current colour: ' + c;
+    });
+    palette.appendChild(swatch);
+  });
+
+  function chooseTool(nextTool) {
+    tool = nextTool;
+    document.querySelectorAll('.tool').forEach(button => button.classList.toggle('active', button.dataset.tool === tool));
+    canvas.style.cursor = tool === 'eraser' ? 'cell' : tool === 'picker' ? 'copy' : 'crosshair';
+    status.textContent = ({pen:'Pencil selected', eraser:'Eraser selected', line:'Line tool selected', spray:'Spray tool selected', fill:'Fill tool selected', picker:'Colour picker selected'})[tool];
+  }
+  document.querySelectorAll('.tool').forEach(button => button.addEventListener('click', () => chooseTool(button.dataset.tool)));
+
+  canvas.addEventListener('pointerdown', event => {
+    event.preventDefault();
+    const p = point(event);
+    if (tool === 'fill') {
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+      return;
+    }
+    if (tool === 'picker') {
+      const pixel = ctx.getImageData(Math.floor(p.x * canvas.width / canvas.clientWidth), Math.floor(p.y * canvas.height / canvas.clientHeight), 1, 1).data;
+      color = '#' + [...pixel].slice(0, 3).map(v => v.toString(16).padStart(2, '0')).join('');
+      status.textContent = 'Picked colour: ' + color;
+      return;
+    }
+    drawing = true; start = p; previous = p;
+    canvas.setPointerCapture(event.pointerId);
+    snapshot = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    if (tool === 'pen' || tool === 'eraser') drawDot(p);
+    if (tool === 'spray') spray(p);
+  });
+
+  function spray(p) {
+    const radius = Number(brushSize.value) * 2;
+    for (let i = 0; i < 28; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * radius;
+      ctx.fillStyle = color;
+      ctx.fillRect(p.x + Math.cos(angle) * distance, p.y + Math.sin(angle) * distance, 1.5, 1.5);
+    }
+  }
+  canvas.addEventListener('pointermove', event => {
+    if (!drawing) return;
+    const p = point(event);
+    if (tool === 'pen' || tool === 'eraser') drawSegment(previous, p);
+    else if (tool === 'spray') spray(p);
+    else if (tool === 'line') {
+      ctx.putImageData(snapshot, 0, 0);
+      // ImageData is device-scaled; reset transform temporarily to keep coordinates consistent.
+      const dpr = window.devicePixelRatio || 1;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      setStrokeStyle(); ctx.beginPath(); ctx.moveTo(start.x, start.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    }
+    previous = p;
+  });
+  function stopDrawing() { drawing = false; start = null; previous = null; snapshot = null; }
+  canvas.addEventListener('pointerup', stopDrawing);
+  canvas.addEventListener('pointercancel', stopDrawing);
+  canvas.addEventListener('lostpointercapture', stopDrawing);
+
+  brushSize.addEventListener('input', () => { sizeValue.textContent = brushSize.value + ' px'; });
+  document.getElementById('clearCanvas').addEventListener('click', () => {
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    status.textContent = 'Canvas cleared';
+  });
+  document.getElementById('saveImage').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'my-painting.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    status.textContent = 'Drawing saved as my-painting.png';
+  });
+
+  resizeCanvas(false);
+  if ('ResizeObserver' in window) new ResizeObserver(() => resizeCanvas(true)).observe(canvas);
+  else window.addEventListener('resize', () => resizeCanvas(true));
+})();
+</script>
+</body>
+</html>
